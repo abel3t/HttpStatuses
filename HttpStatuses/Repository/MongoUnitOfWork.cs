@@ -1,11 +1,6 @@
 using System;
 using System.Collections.Concurrent;
-using System.IO;
-using System.Net.Sockets;
-using System.Threading;
-using System.Threading.Tasks;
 using MongoDB.Driver;
-using Polly;
 
 namespace HttpStatuses.Repository
 {

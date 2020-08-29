@@ -1,20 +1,21 @@
-using System;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using HttpStatuses.Models;
-using System.Threading.Tasks;
 using HttpStatuses.Repository;
+using System.Linq;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 
 namespace HttpStatuses.Controllers
 {
   [ApiController]
   [Route("[controller]")]
-  public class statusController : ControllerBase
+  public class StatusController : ControllerBase
   {
-    private readonly ILogger<statusController> _logger;
+    private readonly ILogger<StatusController> _logger;
     private readonly IMongoUnitOfWork _mongoUnitOfWork;
 
-    public statusController(IMongoUnitOfWork mongoUnitOfWork, ILogger<statusController> logger)
+    public StatusController(IMongoUnitOfWork mongoUnitOfWork, ILogger<StatusController> logger)
     {
       _logger = logger;
       _mongoUnitOfWork = mongoUnitOfWork;
@@ -23,18 +24,16 @@ namespace HttpStatuses.Controllers
     [HttpGet]
     public ObjectResult Get()
     {
-      
-      Status status = new Status()
+      var repo = _mongoUnitOfWork.GetRepository<Status>();
+      var pipeline = new BsonDocument[]
       {
-        Code = 401,
-        Name = "Unauthorized",
-        Description = "Unauthorized!"
+        new BsonDocument{ { "$match", new BsonDocument("code", 400) } }
       };
 
-      var repo = _mongoUnitOfWork.GetRepository<Status>();
-      repo.AddAsync(status);
-
-      return Ok(status);
+      var result = repo.Aggregate(pipeline).Select(p
+        => BsonSerializer.Deserialize<Status>(p));
+      
+      return Ok(result);
     }
   }
 }

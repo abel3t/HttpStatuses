@@ -1,36 +1,14 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
+using MongoDB.Bson;
 
 namespace HttpStatuses.Repository
 {
-  #region Interfaces
-
-  public interface IMongoRepository<T> where T : class
-  {
-    IMongoCollection<T> GetCollection();
-
-    Task AddAsync(T entity);
-    Task AddAsync(IEnumerable<T> entities);
-    Task AddAsync(IEnumerable<T> entities, string collectionName);
-    Task UpdateAsync(object id, T entity);
-    Task UpdateAsync(IEnumerable<T> entities);
-    Task DeleteAsync(Expression<Func<T, bool>> where);
-
-    Task<T> FindByIdAsync(object id);
-    Task<IEnumerable<T>> FindAllAsync();
-    Task<IEnumerable<T>> FindAllWhereAsync(Expression<Func<T, bool>> where);
-    Task<T> FindFirstWhereAsync(Expression<Func<T, bool>> where);
-
-    Task RenameCollectionAsync(string oldCollectionName, string newCollectionName);
-  }
-
-  #endregion
-
   public class MongoRepository<T> : IMongoRepository<T> where T : class
   {
     private readonly IMongoDbContext _context;
@@ -73,6 +51,24 @@ namespace HttpStatuses.Repository
 
     #endregion
 
+    public virtual void InsertOne(T entity) => Collection.InsertOne(entity);
+    public virtual void InsertMany(List<T> entities) => Collection.InsertMany(entities);
+
+    public IEnumerable<T> Find(Expression<Func<T, bool>> filter) => Collection.Find(filter).ToEnumerable();
+    public T FindOneAndUpdate(FilterDefinition<T> filter, UpdateDefinition<T> update, FindOneAndUpdateOptions<T> options = null)
+    {
+      return Collection.FindOneAndUpdate(filter, update, options);
+    }
+    
+    public List<T> FindAll(int pageIndex, int size) => Collection.Find(Builders<T>.Filter.Empty).ToList();
+
+    public List<BsonDocument> Aggregate(BsonDocument[] pipeline)
+    {
+      return Collection.Aggregate<BsonDocument> (pipeline).ToList();
+    }
+    
+    
+
     public async Task AddAsync(T entity) => await Collection.InsertOneAsync(entity);
 
     public async Task AddAsync(IEnumerable<T> entities) => await Collection.InsertManyAsync(entities);
@@ -85,8 +81,6 @@ namespace HttpStatuses.Repository
 
     public async Task UpdateAsync(IEnumerable<T> entities) =>
       await Collection.BulkWriteAsync(CreateUpdates(entities));
-
-    public async Task DeleteAsync(Expression<Func<T, bool>> where) => await Collection.DeleteManyAsync(where);
 
     public async Task<T> FindByIdAsync(object id) => await Collection.Find(Id(id)).SingleOrDefaultAsync();
 
